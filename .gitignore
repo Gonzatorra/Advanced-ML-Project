@@ -1,0 +1,51 @@
+Deliverable1/checkpoints/best_multimodal_vit.pth
+
+imagenes_sinteticas_ham
+
+models/__pycache__
+
+checkpoints_cgan
+
+gan_images
+
+muestras_balanceo
+muestras_balanceo_cgan
+
+**/events.out.tfevents.*
+
+# Ignorar la carpeta de imágenes (pon el nombre exacto de tu carpeta)
+data/
+imagenes/
+HAM10000/
+
+# Ignorar archivos de Python innecesarios
+__pycache__/
+.venv/
+.ipynb_checkpoints/
+
+# Carpetas pesadas que NO quieres en GitHub
+imagenes_sinteticas_ham/
+checkpoints_cgan/
+gan_images/
+muestras_balanceo/
+muestras_balanceo_cgan/
+data/
+HAM10000_images/
+
+# Basura de Python
+**/__pycache__/
+.venv/
+.ipynb_checkpoints/
+**/events.out.tfevents.*
+
+# IGNORAR ENTORNOS VIRTUALES (Esto quitará los 10k de golpe)
+.venv/
+env/
+venv/
+bin/
+lib/
+include/
+share/
+build/
+dist/
+*.egg-info/
