@@ -11,6 +11,8 @@ import torch
 import torch.nn as nn
 from torchvision.utils import make_grid, save_image
 import torchvision.transforms as T
+from pytorch_grad_cam.utils.image import show_cam_on_image
+
 
 from PIL import Image
 
@@ -630,3 +632,47 @@ def balance_dataset_with_gan(netG, X_orig, y_orig, device, latent_dim=100, outpu
                     
     print(f"Balance completed. Images saved in '{output_folder}'")
     return True
+
+
+
+
+
+
+
+
+
+#-----------------#
+#----- XAI  ----- #
+#-----------------#
+def show_gradcam(input_tensor, grayscale_cam, true_label, titulo="Grad-CAM heatmap"):
+    """
+    Toma el tensor de la imagen, el mapa de calor generado y la etiqueta, 
+    y se encarga de todo el proceso de dibujado.
+    """
+    # Desnormalize image
+    img_to_show = input_tensor.squeeze().cpu().numpy().transpose(1, 2, 0)
+    img_to_show = (img_to_show - img_to_show.min()) / (img_to_show.max() - img_to_show.min())
+    
+    # 2. Superponer mapa de calor
+    visualization = show_cam_on_image(img_to_show, grayscale_cam, use_rgb=True)
+    
+    # Draw
+    fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+    ax[0].imshow(img_to_show)
+    ax[0].set_title(f"Original (Etiqueta real: {true_label})")
+    ax[0].axis('off')
+    
+    ax[1].imshow(visualization)
+    ax[1].set_title(titulo)
+    ax[1].axis('off')
+    
+    plt.tight_layout()
+    plt.show()
+
+# --- Utilidades específicas para el ViT ---
+def reshape_transform(tensor, height=14, width=14):
+    result = tensor[:, 1:, :] 
+    result = result.reshape(tensor.size(0), height, width, tensor.size(2))
+    result = result.permute(0, 3, 1, 2)
+    return result
+
