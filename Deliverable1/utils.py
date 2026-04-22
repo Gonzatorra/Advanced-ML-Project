@@ -347,11 +347,11 @@ def train_gan(generator, discriminator, dataloader, num_epochs, device, save_pat
 # ------------------#
 # ----- CGAN  ----- #
 # ------------------#
-def train_cgan(G, D, train_loader, optimizerG, optimizerD, criterion, device, 
+def train_cdcgan(G, D, train_loader, optimizerG, optimizerD, criterion, device, 
                num_epochs, latent_dim, writer, samples_dir, model_dir, 
                fixed_noise, fixed_labels):
     """
-    Train a Conditional Generative Adversarial Network (cGAN) specifically for the HAM10000 dataset.
+    Train a cDCGAN specifically for the HAM10000 dataset.
     
     This implementation includes advanced GAN training techniques:
     - Label Smoothing (0.9 for real targets) to prevent the Discriminator from overconfidence.
@@ -450,7 +450,7 @@ def train_cgan(G, D, train_loader, optimizerG, optimizerD, criterion, device,
                 'G': G.state_dict(),
                 'D': D.state_dict(),
                 'epoch': epoch
-            }, os.path.join(model_dir, f'cgan_ham_128_epoch_{epoch+1}.pth'))
+            }, os.path.join(model_dir, f'cdcgan_ham_128_epoch_{epoch+1}.pth'))
 
         print(f"Epoch [{epoch+1}/{num_epochs}] | Loss D: {lossD.item():.4f} | Loss G: {lossG.item():.4f}")
 

@@ -25,7 +25,7 @@ __pycache__/
 
 # Carpetas pesadas que NO quieres en GitHub
 imagenes_sinteticas_ham/
-checkpoints_cgan/
+checkpoints_cdcgan/
 gan_images/
 muestras_balanceo/
 muestras_balanceo_cgan/
