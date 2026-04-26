@@ -580,9 +580,28 @@ def train_cgan_retrain(G, D, train_loader, optimizerG, optimizerD, criterion, de
 
 def balance_dataset_with_gan(netG, X_orig, y_orig, device, latent_dim=100, output_folder="gan_images"):
     """
-    Generates synthetic images and saves them to disk.
-    Fixes FileNotFoundError by ensuring folders are only created when needed 
-    and handling empty majority class folders.
+    Balances an imbalanced dataset by generating and saving synthetic images 
+    for minority classes using a pre-trained Generator.
+
+    It follows the next logic:
+    - Automated Minority Targeting: Calculates the difference between the majority 
+      class and each minority class to determine the exact number of samples needed.
+    - Conditional Class Synthesis: Iterates through specific medical categories 
+      (akiec, bcc, bkl, df, mel, nv, vasc) using class-specific labels for G.
+    - Quality Monitoring: Saves a visual sample grid (4x2) for each generated class 
+      to allow manual verification of the synthetic data quality.
+    - Image Post-Processing: Normalizes tensors from [-1, 1] to [0, 1] and applies 
+      clamping before PIL conversion to ensure valid JPEG artifacts.
+
+    Parameters:
+    - netG: The pre-trained Generator model.
+    - X_orig, y_orig: Original dataset tensors used to calculate class distribution.
+    - device: "cuda" or "cpu" for tensor operations.
+    - latent_dim: Size of the input noise vector for G (default: 100).
+    - output_folder: Root path where the balanced synthetic images will be stored.
+
+    Returns:
+    - bool: True if the balancing process completes successfully.
     """
     os.makedirs(output_folder, exist_ok=True)
     class_names = ["akiec", "bcc", "bkl", "df", "mel", "nv", "vasc"]
@@ -596,12 +615,12 @@ def balance_dataset_with_gan(netG, X_orig, y_orig, device, latent_dim=100, outpu
         for class_idx in range(7):
             n_to_gen = max_images - class_counts.get(class_idx, 0)
             
-            # --- CAMBIO 1: Si es la clase mayoritaria (n_to_gen <= 0) ---
+            # If it is the majority class, don't do anything
             if n_to_gen <= 0:
                 print(f"Skipping {class_names[class_idx]} (majority class)")
                 continue
             
-            # --- CAMBIO 2: Solo creamos la carpeta si vamos a generar ---
+            # Only create the directory if we are going to generate images
             target_dir = os.path.join(output_folder, class_names[class_idx])
             os.makedirs(target_dir, exist_ok=True)
             
@@ -646,20 +665,39 @@ def balance_dataset_with_gan(netG, X_orig, y_orig, device, latent_dim=100, outpu
 #-----------------#
 def show_gradcam(input_tensor, grayscale_cam, true_label, titulo="Grad-CAM heatmap"):
     """
-    Toma el tensor de la imagen, el mapa de calor generado y la etiqueta, 
-    y se encarga de todo el proceso de dibujado.
+    Orchestrates the visual fusion of raw input data and activation heatmaps 
+    to provide model interpretability (XAI).
+
+    It follows the next steps:
+    - Dynamic Range Normalization: Automatically rescales image tensors from arbitrary 
+      ranges to [0, 1] based on local min/max to ensure consistent visual contrast.
+    - Spatial Superimposition: Blends the grayscale Grad-CAM masks with the original 
+      RGB image using a localized color-map for feature importance identification.
+    - Dual-Axis Comparison: Generates a synchronized side-by-side subplot (1x2) to 
+      facilitate direct attribution analysis between raw pixels and model focus.
+    - Metadata Integration: Embeds ground truth labels and custom titles within 
+      the plot for traceable and documented explainability results.
+
+    Parameters:
+    - input_tensor: The original image tensor (C, H, W).
+    - grayscale_cam: The computed Class Activation Map in 2D format.
+    - true_label: The actual class name or index for contextual verification.
+    - titulo: Custom header for the visualized heatmap (default: "Grad-CAM heatmap").
+
+    Returns:
+    - None (Renders a Matplotlib figure directly).
     """
     # Desnormalize image
     img_to_show = input_tensor.squeeze().cpu().numpy().transpose(1, 2, 0)
     img_to_show = (img_to_show - img_to_show.min()) / (img_to_show.max() - img_to_show.min())
     
-    # 2. Superponer mapa de calor
+    # Put the heatmap over the original image
     visualization = show_cam_on_image(img_to_show, grayscale_cam, use_rgb=True)
     
     # Draw
     fig, ax = plt.subplots(1, 2, figsize=(10, 5))
     ax[0].imshow(img_to_show)
-    ax[0].set_title(f"Original (Etiqueta real: {true_label})")
+    ax[0].set_title(f"Original (True label: {true_label})")
     ax[0].axis('off')
     
     ax[1].imshow(visualization)
@@ -669,8 +707,27 @@ def show_gradcam(input_tensor, grayscale_cam, true_label, titulo="Grad-CAM heatm
     plt.tight_layout()
     plt.show()
 
-# --- Utilidades específicas para el ViT ---
+# Need for XAI in ViT
 def reshape_transform(tensor, height=14, width=14):
+    """
+    Adapts Vision Transformer (ViT) internal representations for convolutional 
+    interpretability tools like Grad-CAM.
+
+    It follows the next adjustments:
+    - Class Token Exclusion: Strips the [CLS] token (index 0) from the sequence 
+      to isolate purely spatial patch embeddings.
+    - Sequence-to-Spatial Mapping: Projects the 1D sequence of flattened patches 
+      back into a 2D grid structure based on the model's patch-resolution.
+    - Dimensional Permutation: Reorders the tensor axes from (Batch, Height, Width, Channels) 
+      to (Batch, Channels, Height, Width) to comply with standard PyTorch CV expectations.
+
+    Parameters:
+    - tensor: The raw output from a ViT attention block (B, N+1, D).
+    - height, width: The spatial dimensions of the patch grid (e.g., 14x14 for ViT-B/16).
+
+    Returns:
+    - torch.Tensor: A spatialized feature map compatible with spatial heatmapping tools.
+    """
     result = tensor[:, 1:, :] 
     result = result.reshape(tensor.size(0), height, width, tensor.size(2))
     result = result.permute(0, 3, 1, 2)
