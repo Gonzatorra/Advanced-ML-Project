@@ -12,6 +12,7 @@ dependencies = [
     "kagglehub[pandas-datasets]>=1.0.0",
     "matplotlib>=3.10.8",
     "numpy>=2.4.2",
+    "optuna>=4.7.0",
     "optuna-dashboard>=0.20.0",
     "pandas>=3.0.0",
     "pillow>=12.1.1",
