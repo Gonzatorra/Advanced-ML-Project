@@ -8,7 +8,17 @@ import pandas as pd
 
 def perform_adf_test(series, name):
     """
-    Realiza el test de Dickey-Fuller Aumentado y muestra los resultados interpretados.
+    Performs the Augmented Dickey-Fuller test and prints the interpreted results.
+
+    This function tests if a time series is stationary. It automatically handles 
+    missing values by dropping NaNs before the calculation.
+
+    Args:
+        series (pd.Series): The time series data to be tested.
+        name (str): A descriptive name for the series, used for display purposes.
+
+    Returns:
+        None: The function prints the results directly to the console.
     """
     # Make sure to drop NaN values for the test
     result = adfuller(series.dropna())
@@ -30,56 +40,65 @@ def perform_adf_test(series, name):
 
 
 
-
-def plot_model_comparison_styled(actual, models_setup, last_n=100):
+def calculate_hit_rate(y_true, y_pred):
     """
-    actual: Serie de Pandas con los retornos reales.
-    models_setup: Diccionario de diccionarios con la configuración:
-                  { 'Nombre': {'data': serie, 'color': 'red', 'ls': '--', 'lw': 2} }
-    """
-    plt.figure(figsize=(15, 6))
-    
-    # 1. Realidad del mercado (siempre como base)
-    plt.plot(actual.tail(last_n).values, label='Actual Returns', color='black', alpha=0.2, lw=1)
-    
-    # 2. Iterar sobre la configuración de cada modelo
-    for name, config in models_setup.items():
-        # Calcular Hit Ratio para el label
-        hit_ratio = (np.sign(actual) == np.sign(config['data'])).mean() * 100
-        
-        plt.plot(
-            config['data'].tail(last_n).values, 
-            label=f"{name} (Hit: {hit_ratio:.1f}%)",
-            color=config.get('color', 'blue'),
-            linestyle=config.get('ls', '-'),
-            linewidth=config.get('lw', 2),
-            alpha=config.get('alpha', 0.8)
-        )
+    Calculates the percentage of correct direction predictions (Hit Rate).
 
-    plt.axhline(0, color='gray', linestyle=':', alpha=0.5)
-    plt.title(f'Advanced Model Comparison (Last {last_n} days)', fontsize=14)
-    plt.xlabel('Time Steps')
-    plt.ylabel('Returns (%)')
-    plt.legend()
-    plt.grid(True, alpha=0.2)
-    plt.show()
-    
-    
+    This metric measures how often the predicted sign (positive or negative) 
+    matches the actual sign of the returns.
+
+    Args:
+        y_true (array-like): The actual observed values.
+        y_pred (array-like): The values predicted by the model.
+
+    Returns:
+        float: The hit rate as a percentage (0 to 100).
+    """
+    hits = (np.sign(y_true) == np.sign(y_pred)).sum()
+    return (hits / len(y_true)) * 100
+
+
+
+
+
+
+
+
+
+
+# ------------- #
+# --- PLOTS --- #
+# ------------- #  
 def comparison_plot(actual, models_setup, last_n=100, use_zoom=True, color = 'blue'):
+    """
+    Plots market returns against model predictions with an optional secondary Y-axis.
+
+    Args:
+        actual (pd.Series): The real market returns.
+        models_setup (dict): Configuration for models, including 'data', 'color', 
+            'ls' (linestyle), and 'lw' (linewidth).
+        last_n (int, optional): Number of recent data points to show. Defaults to 100.
+        use_zoom (bool, optional): If True, plots models on a secondary Y-axis to 
+            better visualize small movements. Defaults to True.
+        color (str, optional): Label color for the secondary axis. Defaults to 'blue'.
+
+    Returns:
+        None: Displays a Matplotlib figure.
+    """
     fig, ax1 = plt.subplots(figsize=(15, 7))
     
-    # 1. Realidad del mercado (Eje izquierdo siempre)
+    # Market reality (always on the left axis)
     actual_data = actual.tail(last_n).values
     ax1.plot(actual_data, label='Actual Returns', color='black', alpha=0.15, lw=1)
     ax1.set_ylabel('Market Returns (%)', color='black')
     
-    # Decidimos si creamos un segundo eje o usamos el primero
+    # Decide if we use a secondary axis for models
     ax_models = ax1.twinx() if use_zoom else ax1
     
     if use_zoom:
         ax_models.set_ylabel('Models Prediction Scale (%)', color=color, fontsize=12)
     
-    # 2. Iterar sobre los modelos
+    # Iterate over models
     for name, config in models_setup.items():
         # Hit Ratio para el label
         hit_ratio = (np.sign(actual) == np.sign(config['data'])).mean() * 100
@@ -93,7 +112,7 @@ def comparison_plot(actual, models_setup, last_n=100, use_zoom=True, color = 'bl
             alpha=config.get('alpha', 0.8)
         )
 
-    # Configuración de leyendas (unificando ambos ejes si hace falta)
+    # Legend handling
     lines1, labels1 = ax1.get_legend_handles_labels()
     if use_zoom:
         lines2, labels2 = ax_models.get_legend_handles_labels()
@@ -112,15 +131,37 @@ def comparison_plot(actual, models_setup, last_n=100, use_zoom=True, color = 'bl
     
     
 
+
+
+
+
+# ------------ #
+# --- LSTM --- #
+# ------------ #  
 def train_lstm_model(model, train_loader, val_loader, criterion, optimizer, 
                      device="cpu", epochs=100, patience=10, save_path="best_lstm.pth",
                      log_dir="runs/apple_lstm_experiment"):
     """
-    Entrena la LSTM para regresión con Early Stopping y soporte para TensorBoard.
+    Trains an LSTM model for regression with Early Stopping and TensorBoard logging.
+
+    Args:
+        model (nn.Module): The PyTorch LSTM model to train.
+        train_loader (DataLoader): DataLoader for the training set.
+        val_loader (DataLoader): DataLoader for the validation set.
+        criterion (callable): Loss function (e.g., nn.MSELoss).
+        optimizer (Optimizer): PyTorch optimizer (e.g., Adam).
+        device (str, optional): Device to run on ('cpu' or 'cuda'). Defaults to "cpu".
+        epochs (int, optional): Maximum number of training iterations. Defaults to 100.
+        patience (int, optional): Epochs to wait for improvement before Early Stopping. Defaults to 10.
+        save_path (str, optional): Path to save the best model weights. Defaults to "best_lstm.pth".
+        log_dir (str, optional): Directory for TensorBoard logs.
+
+    Returns:
+        nn.Module: The model with the best weights loaded.
     """
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     
-    # Inicializamos el escritor de TensorBoard
+    # Initialize TensorBoard writer
     writer = SummaryWriter(log_dir=log_dir)
     
     model.to(device)
@@ -128,7 +169,7 @@ def train_lstm_model(model, train_loader, val_loader, criterion, optimizer,
     epochs_no_improve = 0
 
     for epoch in range(epochs):
-        # ---- Entrenamiento ----
+        # ---- Training ----
         model.train()
         train_loss = 0.0
         for batch_X, batch_y in train_loader:
@@ -137,7 +178,6 @@ def train_lstm_model(model, train_loader, val_loader, criterion, optimizer,
             optimizer.zero_grad()
             outputs = model(batch_X)
             
-            # squeeze() para asegurar que las dimensiones coincidan (batch, 1) vs (batch)
             loss = criterion(outputs.squeeze(), batch_y)
             loss.backward()
             optimizer.step()
@@ -146,7 +186,7 @@ def train_lstm_model(model, train_loader, val_loader, criterion, optimizer,
 
         train_loss /= len(train_loader.dataset)
 
-        # ---- Validación ----
+        # ---- Validation ----
         model.eval()
         val_loss = 0.0
         with torch.no_grad():
@@ -158,10 +198,10 @@ def train_lstm_model(model, train_loader, val_loader, criterion, optimizer,
 
         val_loss /= len(val_loader.dataset)
 
-        # ---- Guardar en TensorBoard ----
+        # ---- Save to TensorBoard ----
         writer.add_scalar('Loss/Train', train_loss, epoch)
         writer.add_scalar('Loss/Val', val_loss, epoch)
-        # También podemos loguear el learning rate si usamos schedulers
+        # We can also log the learning rate if we use schedulers
         writer.add_scalar('Params/Learning_Rate', optimizer.param_groups[0]['lr'], epoch)
 
         print(f"Epoch {epoch+1}/{epochs} | Train Loss: {train_loss:.6f} | Val Loss: {val_loss:.6f}")
@@ -178,7 +218,7 @@ def train_lstm_model(model, train_loader, val_loader, criterion, optimizer,
             print(f"Early stopping en época {epoch+1}")
             break
 
-    # Cerrar TensorBoard y cargar mejor modelo
+    # Close TensorBoard and load the best model weights
     writer.close()
     model.load_state_dict(torch.load(save_path))
     return model
@@ -186,25 +226,36 @@ def train_lstm_model(model, train_loader, val_loader, criterion, optimizer,
 
 
 
+
 def get_lstm_predictions(model, X_tensor, scaler, original_index, window_size):
     """
-    Transforma los tensores en predicciones reales y alineadas con sus fechas.
+    Generates model predictions and transforms them back to the original scale.
+
+    Args:
+        model (nn.Module): The trained LSTM model.
+        X_tensor (torch.Tensor): The input features as a tensor.
+        scaler (sklearn.preprocessing): The fitted scaler used during training.
+        original_index (pd.Index): The original dates/index of the dataframe.
+        window_size (int): The number of time steps used for each prediction.
+
+    Returns:
+        pd.Series: The unscaled predictions aligned with the correct dates.
     """
     model.eval()
     with torch.no_grad():
-        # 1. Predicción (la pasamos a CPU y Numpy)
+        # Compute the predictions in the scaled space
         preds = model(X_tensor).cpu().numpy()
     
-    # 2. El "Truco" del Scaler: Crear matriz temporal de 5 columnas
-    # (Usamos el mismo número de columnas con el que entrenamos el scaler)
+    # Use the same approach as before to inverse transform the predictions
+    # Create a placeholder array with the same number of features as the scaler expects
     placeholder = np.zeros((len(preds), scaler.n_features_in_))
     placeholder[:, 0] = preds.flatten()
     
-    # 3. Inverse Transform
+    # Inverse transform to get predictions in the original scale
     unscaled = scaler.inverse_transform(placeholder)[:, 0]
     
-    # 4. Alinear con el índice original (quitando el desfase de la ventana)
-    # Importante: El índice empieza en window_size porque los primeros días se "pierden" para crear la secuencia
+    # 4. Align with the original index (removing the window offset)
+    # Important: The index starts at window_size because the first days are lost when creating the sequence
     final_series = pd.Series(unscaled, index=original_index[window_size:])
     
     return final_series
