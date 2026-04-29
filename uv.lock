@@ -34,6 +34,7 @@ name = "advanced-ml-project"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "chronos" },
     { name = "grad-cam" },
     { name = "huggingface" },
     { name = "huggingface-hub" },
@@ -62,6 +63,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "chronos", specifier = ">=0.3" },
     { name = "grad-cam", specifier = ">=1.5.5" },
     { name = "huggingface", specifier = ">=0.0.1" },
     { name = "huggingface-hub", specifier = ">=1.10.1" },
@@ -315,6 +317,12 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/da/5f/6b8f83a55bb8278772c5ae54a577f3099025f9ade59d0136ac24a0df4bde/charset_normalizer-3.4.4-cp314-cp314-win_arm64.whl", hash = "sha256:de00632ca48df9daf77a2c65a484531649261ec9f25489917f09e455cb09ddb2", size = 100743, upload-time = "2025-10-14T04:41:52.122Z" },
     { url = "https://files.pythonhosted.org/packages/0a/4c/925909008ed5a988ccbb72dcc897407e5d6d3bd72410d69e051fc0c14647/charset_normalizer-3.4.4-py3-none-any.whl", hash = "sha256:7a32c560861a02ff789ad905a2fe94e3f840803362c84fecf1851cb4cf3dc37f", size = 53402, upload-time = "2025-10-14T04:42:31.76Z" },
 ]
+
+[[package]]
+name = "chronos"
+version = "0.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f7/96/a7a16dbd78230b071a23efd8e4c28bd45819c340f9db84b890dd8c3ff11d/chronos-0.3.zip", hash = "sha256:d41100d4b4dfe22bd0df08d87de6962da2a5ee70321fbe548d8a22fc7d4fd5ed", size = 10858, upload-time = "2015-05-01T17:17:00.402Z" }
 
 [[package]]
 name = "click"
