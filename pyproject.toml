@@ -27,6 +27,7 @@ dependencies = [
     "statsmodels>=0.14.6",
     "tensorboard>=2.20.0",
     "tensorflow>=2.21.0",
+    "tf-keras>=2.21.0",
     "torch>=2.10.0",
     "torchaudio>=2.10.0",
     "torchvision>=0.25.0",
